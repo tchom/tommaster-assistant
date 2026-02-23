@@ -251,6 +251,17 @@ const handleTalkStart = (e) => {
     isTalkPressed = true;
     talkBtn.classList.add('active'); // Add active style
     log("Listening...");
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        // Send a message with activityStart to signal start of audio input
+        const msg = {
+            realtimeInput: {
+                mediaChunks: [],
+                activityStart: {}
+            }
+        };
+        socket.send(JSON.stringify(msg));
+    }
 };
 
 const handleTalkEnd = (e) => {
@@ -260,11 +271,12 @@ const handleTalkEnd = (e) => {
     log("Processing response..."); 
     
     if (socket && socket.readyState === WebSocket.OPEN) {
-        // According to documentation and v1alpha proto, clientContent needs 'turnComplete' boolean.
-        // It should NOT be nested inside turns[].
+        // Send a message with activityEnd to signal end of audio input
+        // This is valid when automaticActivityDetection is disabled
         const msg = {
-            clientContent: {
-                turnComplete: true
+            realtimeInput: {
+                mediaChunks: [],
+                activityEnd: {}
             }
         };
         socket.send(JSON.stringify(msg));
