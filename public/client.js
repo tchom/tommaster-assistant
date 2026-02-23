@@ -228,7 +228,7 @@ async function playQueue() {
     isPlaying = true;
     const audioData = responseQueue.shift();
     
-    const audioBuffer = audioContext.createBuffer(1, audioData.length, 16000); // 16kHz explicitly
+    const audioBuffer = audioContext.createBuffer(1, audioData.length, 24000); // Update to 24kHz (Gemini Live API default)
     audioBuffer.getChannelData(0).set(audioData);
     
     const source = audioContext.createBufferSource();
