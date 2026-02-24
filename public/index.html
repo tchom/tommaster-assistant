@@ -43,6 +43,8 @@
             background: radial-gradient(circle at 50% 50%, #666 0%, #111 90%);
             box-shadow: inset 0 0 15px #000;
             border: 3px solid #555;
+            position: relative; 
+            overflow: hidden; /* Important for eyelids staying in bounds */
         }
 
         .hal-eye {
@@ -53,6 +55,48 @@
             position: relative;
             box-shadow: 0 0 30px #ff0000;
             transition: box-shadow 0.05s ease-out, filter 0.05s ease-out;
+            overflow: hidden; /* Clip contents */
+        }
+        
+        .eyelid {
+            position: absolute;
+            background: #222;
+            width: 150%;
+            left: -25%;
+            height: 50%;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+        }
+
+        .eyelid.upper {
+            top: 0;
+            transform-origin: top;
+            transform: translateY(-100%);
+            border-bottom: 2px solid #555;
+            border-radius: 0 0 50% 50%;
+        }
+
+        .eyelid.lower {
+            bottom: 0;
+            transform-origin: bottom;
+            transform: translateY(100%);
+            border-top: 2px solid #555;
+            border-radius: 50% 50% 0 0;
+        }
+
+        /* Animations states */
+        .hal-eye.blink .eyelid.upper { transform: translateY(0%); }
+        .hal-eye.blink .eyelid.lower { transform: translateY(0%); }
+
+        .hal-eye.angry .eyelid.upper { transform: translateY(-40%) rotate(15deg); }
+        .hal-eye.angry .eyelid.lower { transform: translateY(40%) rotate(-15deg); }
+
+        .hal-eye.suspicious .eyelid.upper { transform: translateY(-60%); }
+        .hal-eye.suspicious .eyelid.lower { transform: translateY(60%); }
+
+        .hal-eye.shocked .hal-pupil { 
+            transform: scale(0.5); 
+            box-shadow: 0 0 20px #fff; 
         }
 
         .hal-pupil {
@@ -66,6 +110,7 @@
             opacity: 0.8;
             filter: blur(3px);
             box-shadow: 0 0 15px #fff;
+            transition: transform 0.2s; /* Smooth scaling */
         }
         
         .reflection {
@@ -123,6 +168,8 @@
     <div class="hal-panel">
         <div class="hal-camera-ring">
             <div class="hal-eye" id="halEye">
+                <div class="eyelid upper"></div>
+                <div class="eyelid lower"></div>
                 <div class="reflection"></div>
                 <div class="hal-pupil"></div>
             </div>

@@ -266,6 +266,7 @@ function visualize() {
     // Default resting state
     let glowSize = 20; 
     let centerOpacity = 0.8;
+    let intensity = 0; // Initialize in outer scope
     
     if (isPlaying && analyser) {
         analyser.getByteFrequencyData(visualizerDataArray);
@@ -281,7 +282,7 @@ function visualize() {
         
         // Map average volume (0-255) to glow intensity
         // Amplify the effect
-        const intensity = avg / 255;
+        intensity = avg / 255;
         
         // Base glow + dynamic glow
         glowSize = 20 + (intensity * 100); 
@@ -294,9 +295,58 @@ function visualize() {
         if (pupil) {
             pupil.style.opacity = centerOpacity;
             pupil.style.boxShadow = `0 0 ${glowSize/2}px #fff`;
+            
+            // Subtle pupil scaling on loud sounds (Shock reaction)
+            if (intensity > 0.6) {
+                halEye.classList.add('shocked');
+            } else {
+                halEye.classList.remove('shocked');
+            }
         }
     }
 }
+
+// --- Expressive Animations ---
+// Random Blink
+function randomBlink() {
+    if(!halEye) return;
+    
+    // Don't blink if expressing strong emotion
+    if(halEye.classList.contains('shocked') || halEye.classList.contains('angry')) {
+        setTimeout(randomBlink, 2000);
+        return;
+    }
+    
+    halEye.classList.add('blink');
+    setTimeout(() => {
+        halEye.classList.remove('blink');
+    }, 150 + Math.random() * 100); // 150-250ms blink
+    
+    // Next blink in 2-6 seconds
+    setTimeout(randomBlink, 2000 + Math.random() * 4000);
+}
+
+// Random Suspicious Squint
+function randomSquint() {
+     if(!halEye || isPlaying) {
+         setTimeout(randomSquint, 5000);
+         return; // Don't squint while talking
+     }
+     
+     // 10% chance to squint when idle
+     if(Math.random() < 0.1) {
+         halEye.classList.add('suspicious');
+         setTimeout(() => {
+             halEye.classList.remove('suspicious');
+         }, 2000 + Math.random() * 2000);
+     }
+     
+     setTimeout(randomSquint, 5000);
+}
+
+// Start animations
+randomBlink();
+randomSquint();
 
 startBtn.addEventListener('click', startAssistant);
 stopBtn.addEventListener('click', stopAssistant);
