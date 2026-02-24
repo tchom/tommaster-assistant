@@ -1,10 +1,13 @@
 const logDiv = document.getElementById('log');
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
-const talkBtn = document.getElementById('talkBtn'); // Get the talk button
+const talkBtn = document.getElementById('talkBtn'); 
+const halEye = document.getElementById('halEye'); // Get HAL eye element
 
 let socket;
 let audioContext;
+let analyser; // For visualization
+let visualizerDataArray;
 let mediaStream;
 let processor;
 let inputNode;
@@ -115,6 +118,15 @@ function stopAssistant() {
 async function startAudio() {
     audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 }); // Goal: 16kHz
     
+    // Create Analyser for visualization
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    const bufferLength = analyser.frequencyBinCount;
+    visualizerDataArray = new Uint8Array(bufferLength);
+    
+    // Start visualization loop
+    visualize();
+
     try {
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: {
             channelCount: 1,
@@ -233,13 +245,57 @@ async function playQueue() {
     
     const source = audioContext.createBufferSource();
     source.buffer = audioBuffer;
-    source.connect(audioContext.destination);
+    
+    // Connect source to analyser AND destination
+    source.connect(analyser); // Connect to visualizer
+    analyser.connect(audioContext.destination); // Connect visualizer to speakers
     
     source.onended = () => {
         playQueue();
     };
     
     source.start();
+}
+
+// --- Visualization ---
+function visualize() {
+    if (!audioContext) return;
+    
+    requestAnimationFrame(visualize);
+    
+    // Default resting state
+    let glowSize = 20; 
+    let centerOpacity = 0.8;
+    
+    if (isPlaying && analyser) {
+        analyser.getByteFrequencyData(visualizerDataArray);
+        
+        // Calculate average volume
+        let avg = 0;
+        // Focus on lower frequencies for voice
+        const range = visualizerDataArray.length / 2;
+        for(let i = 0; i < range; i++) {
+            avg += visualizerDataArray[i];
+        }
+        avg = avg / range;
+        
+        // Map average volume (0-255) to glow intensity
+        // Amplify the effect
+        const intensity = avg / 255;
+        
+        // Base glow + dynamic glow
+        glowSize = 20 + (intensity * 100); 
+        centerOpacity = 0.8 + (intensity * 0.2);
+    }
+    
+    if (halEye) {
+        halEye.style.boxShadow = `0 0 ${glowSize}px #ff0000`;
+        const pupil = halEye.querySelector('.hal-pupil');
+        if (pupil) {
+            pupil.style.opacity = centerOpacity;
+            pupil.style.boxShadow = `0 0 ${glowSize/2}px #fff`;
+        }
+    }
 }
 
 startBtn.addEventListener('click', startAssistant);
