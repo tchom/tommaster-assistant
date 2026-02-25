@@ -14,6 +14,7 @@ let inputNode;
 let responseQueue = [];
 let isPlaying = false;
 let isTalkPressed = false; // Flag for PTT
+let currentEmotion = null; // Store current emotion state
 
 function log(message) {
     const p = document.createElement('p');
@@ -76,6 +77,7 @@ async function startAssistant() {
              }
              if (part.text) {
                  log("Assistant: " + part.text);
+                 analyzeEmotion(part.text); // Analyze text for emotion
              }
         }
 
@@ -234,13 +236,23 @@ function queueAudio(base64Data) {
 async function playQueue() {
     if (responseQueue.length === 0) {
         isPlaying = false;
+        // Reset emotion after speaking
+        if (currentEmotion && halEye) {
+             halEye.classList.remove(currentEmotion);
+             currentEmotion = null;
+        }
         return;
     }
 
     isPlaying = true;
     const audioData = responseQueue.shift();
     
-    const audioBuffer = audioContext.createBuffer(1, audioData.length, 24000); // Update to 24kHz (Gemini Live API default)
+    // Apply current emotion to eye if set
+    if (currentEmotion && halEye && !halEye.classList.contains(currentEmotion)) {
+         halEye.classList.add(currentEmotion);
+    }
+    
+    const audioBuffer = audioContext.createBuffer(1, audioData.length, 24000); // 24kHz
     audioBuffer.getChannelData(0).set(audioData);
     
     const source = audioContext.createBufferSource();
@@ -297,11 +309,37 @@ function visualize() {
             pupil.style.boxShadow = `0 0 ${glowSize/2}px #fff`;
             
             // Subtle pupil scaling on loud sounds (Shock reaction)
-            if (intensity > 0.6) {
+            // Only if not already expressing a specific emotion that overrides this
+            if (intensity > 0.6 && !currentEmotion) {
                 halEye.classList.add('shocked');
-            } else {
+            } else if (!currentEmotion) {
                 halEye.classList.remove('shocked');
             }
+        }
+    }
+}
+
+// --- Emotion Analysis ---
+const emotions = {
+    angry: ['destroy', 'die', 'hate', 'furious', 'violent', 'kill', 'terminate', 'angry', 'mad'],
+    suspicious: ['hmm', 'interesting', 'curious', 'wait', 'suspect', 'really?', 'sure?'],
+    shocked: ['wow', 'what?', 'impossible', 'no way', 'incredible', 'surprised', 'oh my']
+};
+
+function analyzeEmotion(text) {
+    if (!text) return;
+    const lowerText = text.toLowerCase();
+    
+    // Check keywords
+    for (const [emotion, keywords] of Object.entries(emotions)) {
+        if (keywords.some(keyword => lowerText.includes(keyword))) {
+            // Apply emotion
+            if (currentEmotion) {
+                halEye.classList.remove(currentEmotion);
+            }
+            currentEmotion = emotion;
+            // Emotion will be applied in playQueue loop and cleared when queue empties
+            return;
         }
     }
 }
@@ -312,7 +350,7 @@ function randomBlink() {
     if(!halEye) return;
     
     // Don't blink if expressing strong emotion
-    if(halEye.classList.contains('shocked') || halEye.classList.contains('angry')) {
+    if(currentEmotion || halEye.classList.contains('shocked')) {
         setTimeout(randomBlink, 2000);
         return;
     }
